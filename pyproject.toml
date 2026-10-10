@@ -179,3 +179,12 @@ fallback_version = "0.0.0"
 # branches and are not ancestors of `master`, so without an anchor `git
 # describe` would fall back to an ancient tag and compute the wrong version.
 describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--match", "v*", "--match", "dummy-v*"]
+
+[tool.uv]
+# Clarabel from the Unsquared2 fork's GitHub release (bound and auxiliary-
+# variable elimination, banded KKT solver).  Its wheels are not on PyPI,
+# where "clarabel" is the upstream project; this makes uv see them, and its
+# local version 0.11.1+unsquared.1 sorts above upstream's 0.11.1.  With pip,
+# pass the same URL to --find-links.  Keep the version in step with
+# continuous_integration/install_clarabel.sh.
+find-links = ["https://github.com/Unsquared2/Clarabel.rs/releases/expanded_assets/v0.11.1+unsquared.1"]
