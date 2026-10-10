@@ -61,17 +61,28 @@ jobs:
       # Loading highspy and ortools in the same process causes native
       # symbol conflicts (google/or-tools#5246). Run OR-Tools tests
       # (GLOP/PDLP) in a separate process to avoid this.
+      #
+      # COPT dies with an illegal instruction on runners with AVX-512 once
+      # other solvers' native libraries are loaded in the same process
+      # (it runs fine alone on the same runners), so its tests also run in
+      # a separate process.
       - name: Run test_conic_solvers
-        run: uv run pytest -rs -m "not knitro and not ortools" cvxpy/tests/test_conic_solvers.py
+        run: uv run pytest -rs -m "not knitro and not ortools and not copt" cvxpy/tests/test_conic_solvers.py
       - name: Run test_conic_solvers (OR-Tools)
         if: always()
         run: uv run pytest -rs -m ortools cvxpy/tests/test_conic_solvers.py
       - name: Run test_conic_solvers (KNITRO)
         if: always()
         run: uv run pytest -rs -m knitro cvxpy/tests/test_conic_solvers.py
+      - name: Run test_conic_solvers (COPT)
+        if: always()
+        run: uv run pytest -rs -m copt cvxpy/tests/test_conic_solvers.py
       - name: Run test_qp_solvers
         if: always()
-        run: uv run pytest -rs -m "not knitro" cvxpy/tests/test_qp_solvers.py
+        run: uv run pytest -rs -m "not knitro and not copt" cvxpy/tests/test_qp_solvers.py
+      - name: Run test_qp_solvers (COPT)
+        if: always()
+        run: uv run pytest -rs -m copt cvxpy/tests/test_qp_solvers.py
       - name: Run test_qp_solvers (KNITRO)
         if: always()
         run: uv run pytest -rs -m knitro cvxpy/tests/test_qp_solvers.py

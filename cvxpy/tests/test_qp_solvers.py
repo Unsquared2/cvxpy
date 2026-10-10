@@ -72,7 +72,7 @@ def is_xpress_available():
 # --- Solver parametrization --- #
 
 def _solver_marks(solver):
-    """License-skip and ``knitro`` marks for a single solver."""
+    """License-skip, ``knitro`` and ``copt`` marks for a single solver."""
     marks = []
     if solver == cp.MOSEK and not is_mosek_available():
         marks.append(pytest.mark.skip(reason='MOSEK license not available'))
@@ -82,6 +82,8 @@ def _solver_marks(solver):
         marks.append(pytest.mark.knitro)
         if not is_knitro_available():
             marks.append(pytest.mark.skip(reason='KNITRO not available'))
+    if solver == cp.COPT:
+        marks.append(pytest.mark.copt)
     return marks
 
 
@@ -582,7 +584,8 @@ def test_quad_obj_symmetric_mixed_dpp(solver):
 
 @pytest.mark.parametrize(
     "solver",
-    [s for s in [cp.OSQP, cp.QPALM, cp.HIGHS, cp.PIQP, cp.COPT]
+    [pytest.param(s, marks=_solver_marks(s), id=s)
+     for s in [cp.OSQP, cp.QPALM, cp.HIGHS, cp.PIQP, cp.COPT]
      if s in INSTALLED_SOLVERS],
 )
 def test_warm_start(solver):
@@ -978,6 +981,7 @@ copt_skip = pytest.mark.skipif(
 
 
 @copt_skip
+@pytest.mark.copt
 def test_copt_mixed_integer():
     """A mixed boolean/integer QP exercises the MIP variable-type path and
     MIP-solution retrieval."""
@@ -992,6 +996,7 @@ def test_copt_mixed_integer():
 
 
 @copt_skip
+@pytest.mark.copt
 def test_copt_solver_opts_passthrough():
     """Solver options that are not CVXPY-interface arguments are forwarded to
     COPT via ``setParam``."""
@@ -1003,6 +1008,7 @@ def test_copt_solver_opts_passthrough():
 
 
 @copt_skip
+@pytest.mark.copt
 def test_copt_save_file(tmp_path):
     """The ``save_file`` option writes the model to disk before solving."""
     out = tmp_path / "model.mps"
