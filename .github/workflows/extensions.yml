@@ -34,6 +34,13 @@ jobs:
           cd cvxpylayers
           uv pip install ".[torch, jax]"
           uv pip install "mlx[cpu]" "mpax"
+          # cvxpylayers differentiates through diffcp, which solves with SCS
+          # at its default tolerances; since SCS 3.3 (new algorithm defaults)
+          # the finite-difference gradchecks of test_dual_gradcheck_inequality,
+          # test_dual_gradcheck_vector_equality and test_torch.py::test_sdp
+          # miss their tolerance (relative errors of 4e-4 to 1e-3).  They pass
+          # with SCS 3.2; the fix belongs in cvxpylayers' tests.
+          uv pip install "scs<3.3"
       - name: Run CVXPYlayers tests
         run: |
           uv run --no-sync pytest cvxpylayers/tests \
