@@ -9,6 +9,8 @@ CVXPY
 
 **The CVXPY documentation is at [cvxpy.org](https://www.cvxpy.org/).**
 
+> **Unsquared2 fork.** This fork uses the [Unsquared2 Clarabel fork](https://github.com/Unsquared2/Clarabel.rs), which is faster on bound-constrained, banded and factor-model problems. Neither package is on PyPI: the `cvxpy` and `clarabel` projects there are upstream's. Each [release](https://github.com/Unsquared2/cvxpy/releases) attaches wheels for Linux, macOS and Windows, and its notes give the `pip install` command that fetches both packages from the GitHub releases.
+
 *We are building a CVXPY community on [Discord](https://discord.gg/4urRQeGBCr). Join the conversation! For issues and long-form discussions, use [Github Issues](https://github.com/cvxpy/cvxpy/issues) and [Github Discussions](https://github.com/cvxpy/cvxpy/discussions).*
 
 **Contents**

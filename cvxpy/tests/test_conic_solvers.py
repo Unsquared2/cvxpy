@@ -3403,6 +3403,7 @@ class TestSCIPY(unittest.TestCase):
 
 
 @unittest.skipUnless('COPT' in INSTALLED_SOLVERS, 'COPT is not installed.')
+@pytest.mark.copt
 class TestCOPT(unittest.TestCase):
 
     def test_copt_lp_0(self) -> None:
@@ -3962,15 +3963,20 @@ class TestCUOPT(unittest.TestCase):
 
 
 def _ortools_params(solvers):
-    """Wrap GLOP/PDLP solver names with ``pytest.mark.ortools``.
+    """Wrap GLOP/PDLP solver names with ``pytest.mark.ortools``, and COPT
+    with ``pytest.mark.copt``.
 
-    This keeps those parameter variants in the isolated OR-Tools pytest
-    process and out of the main conic-solver invocation (google/or-tools#5246).
+    This keeps those parameter variants in the isolated OR-Tools and COPT
+    pytest processes and out of the main conic-solver invocation
+    (google/or-tools#5246; COPT crashes on AVX-512 runners next to other
+    native solvers).
     """
     result = []
     for s in solvers:
         if s in ("GLOP", "PDLP"):
             result.append(pytest.param(s, marks=[pytest.mark.ortools], id=s))
+        elif s == "COPT":
+            result.append(pytest.param(s, marks=[pytest.mark.copt], id=s))
         else:
             result.append(s)
     return result

@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import warnings
+
 import numpy as np
 import pytest
 
@@ -267,10 +269,14 @@ class TestDqcp(base_test.BaseTest):
         # infeasibility) at query points near the optimum of this badly
         # scaled problem; bisection used to re-solve the identical failing
         # subproblem until it raised "Max iters hit during bisection".
+        # Whether CLARABEL fails at those points depends on its version
+        # (releases with bound elimination solve them), so the warning that
+        # bisection emits on a failure is allowed but not required.
         x = cp.Variable(nonneg=True)
         y = cp.Variable(nonneg=True)
         problem = cp.Problem(cp.Maximize(cp.multiply(x, y)), [x + y <= 1e-4])
-        with pytest.warns(RuntimeWarning):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
             problem.solve(solver=cp.CLARABEL, qcp=True)
         self.assertIn(problem.status, s.SOLUTION_PRESENT)
         # optimal value is (5e-5)**2 = 2.5e-9; bisection eps is 1e-6
