@@ -182,9 +182,9 @@ describe_command = ["git", "describe", "--dirty", "--tags", "--long", "--match",
 
 [tool.uv]
 # Clarabel from the Unsquared2 fork's GitHub release (bound and auxiliary-
-# variable elimination, banded KKT solver).  Its wheels are not on PyPI,
+# variable elimination, banded and Schur-complement KKT solvers).  Its wheels are not on PyPI,
 # where "clarabel" is the upstream project; this makes uv see them, and its
-# local version 0.11.1+unsquared.1 sorts above upstream's 0.11.1.  With pip,
+# local version 0.11.1+unsquared.2 sorts above upstream's 0.11.1.  With pip,
 # pass the same URL to --find-links.  Keep the version in step with
 # continuous_integration/install_clarabel.sh.
-find-links = ["https://github.com/Unsquared2/Clarabel.rs/releases/expanded_assets/v0.11.1+unsquared.1"]
+find-links = ["https://github.com/Unsquared2/Clarabel.rs/releases/expanded_assets/v0.11.1+unsquared.2"]
