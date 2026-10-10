@@ -15,6 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 """
+import numpy as np
 import scipy.sparse as sp
 
 import cvxpy.settings as s
@@ -25,6 +26,20 @@ from cvxpy.reductions.solvers.conic_solvers.conic_solver import ConicSolver
 from cvxpy.reductions.solvers.solver_inverse_data import SolverInverseData
 from cvxpy.utilities.citations import CITATION_DICT
 from cvxpy.utilities.psd_utils import TriangleKind
+
+
+def triu_csc(P):
+    """The upper triangle of P, as a canonical CSC array.
+
+    The quadratic forms produced by ConeMatrixStuffing are usually upper
+    triangular and canonical already, and are then returned as they are;
+    otherwise this falls back to scipy.sparse.triu.
+    """
+    if P.format == "csc" and P.has_canonical_format:
+        cols = np.repeat(np.arange(P.shape[1]), np.diff(P.indptr))
+        if np.all(P.indices <= cols):
+            return P
+    return sp.csc_array(sp.triu(P, format="csc"))
 
 
 def dims_to_solver_cones(cone_dims):
@@ -128,8 +143,10 @@ class CLARABEL(ConicSolver):
 
         # if accept unknown was specified and solution is present, then an insufficient progress
         # status will be mapped to OPTIMAL_INACCURATE.
+        # solver_options is None when the problem data was obtained with
+        # get_problem_data() and the results unpacked with unpack_results()
         if isinstance(inverse_data, SolverInverseData) and\
-            CLARABEL.ACCEPT_UNKNOWN in inverse_data.solver_options and\
+            CLARABEL.ACCEPT_UNKNOWN in (inverse_data.solver_options or {}) and\
             solution.x is not None and solution.z is not None:
             status_map["InsufficientProgress"] = s.OPTIMAL_INACCURATE
         status = status_map.get(str(solution.status), s.SOLVER_ERROR)
@@ -216,12 +233,10 @@ class CLARABEL(ConicSolver):
         q = data[s.C]
 
         if s.P in data:
-            P = data[s.P]
+            P = triu_csc(data[s.P])
         else:
             nvars = q.size
             P = sp.csc_array((nvars, nvars))
-
-        P = sp.triu(P).tocsc()
 
         cones = dims_to_solver_cones(data[ConicSolver.DIMS])
 

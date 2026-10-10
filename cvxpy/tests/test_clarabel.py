@@ -17,12 +17,13 @@ from types import SimpleNamespace
 
 import clarabel
 import numpy as np
+import scipy.sparse as sp
 
 import cvxpy as cp
 import cvxpy.settings as s
 from cvxpy.expressions.variable import Variable
 from cvxpy.problems.problem import Problem
-from cvxpy.reductions.solvers.conic_solvers.clarabel_conif import CLARABEL
+from cvxpy.reductions.solvers.conic_solvers.clarabel_conif import CLARABEL, triu_csc
 from cvxpy.reductions.solvers.solver_inverse_data import SolverInverseData
 from cvxpy.tests.base_test import BaseTest
 
@@ -126,3 +127,39 @@ class ClarabelTest(BaseTest):
         mock_inverse_data = SimpleNamespace(solver_options={})
         sol = solver.invert(mock_solution, mock_inverse_data)
         self.assertEqual(sol.status, s.SOLVER_ERROR)
+
+    def test_unpack_results_with_problem_data(self):
+        """
+        Results of a solve through get_problem_data() / solve_via_data()
+        unpack, although that path records no solver options.
+        """
+        x = cp.Variable(2)
+        prob = cp.Problem(cp.Minimize(cp.sum_squares(x - 1)), [x >= 0, cp.sum(x) <= 1])
+        data, chain, inverse_data = prob.get_problem_data(cp.CLARABEL)
+        solution = chain.solver.solve_via_data(data, False, False, {})
+        prob.unpack_results(solution, chain, inverse_data)
+        self.assertEqual(prob.status, s.OPTIMAL)
+        self.assertItemsAlmostEqual(x.value, [0.5, 0.5], places=5)
+
+    def test_triu_csc(self):
+        """
+        The upper triangle passed to Clarabel matches scipy.sparse.triu, in
+        canonical CSC form, whatever the format of P.
+        """
+        rng = np.random.default_rng(0)
+        M = sp.random(12, 12, density=0.4, random_state=1)
+        M = M + M.T
+        triu = sp.csc_array(sp.triu(M))
+        # an upper triangular CSC matrix with unsorted indices
+        perm = np.concatenate([np.arange(a, b)[::-1] for a, b in
+                               zip(triu.indptr[:-1], triu.indptr[1:])])
+        unsorted = sp.csc_array((triu.data[perm], triu.indices[perm], triu.indptr),
+                                shape=triu.shape)
+        for P in [M.tocsc(), M.tocsr(), M.tocoo(), triu, unsorted,
+                  sp.csc_array((12, 12)), sp.csc_array(rng.standard_normal((12, 12)))]:
+            U = triu_csc(P)
+            self.assertEqual(U.format, "csc")
+            self.assertTrue(U.has_canonical_format)
+            self.assertEqual((U != sp.triu(P)).nnz, 0)
+        # already upper triangular and canonical: passed through
+        self.assertIs(triu_csc(triu), triu)
