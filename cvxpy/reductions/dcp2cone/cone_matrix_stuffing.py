@@ -331,9 +331,15 @@ class ParamConeProg(ParamProb):
             self.param_id_to_size,
             param_value,
             zero_offset=zero_offset)
-        q, d = canonInterface.get_matrix_from_tensor(
-            self.q, param_vec, self.x.size, with_offset=True)
-        q = q.toarray().flatten()
+        if param_vec is not None and sp.issparse(self.q) and \
+                self.q.shape == (self.x.size + 1, param_vec.size):
+            # q and d in one product of the tensor with the parameter vector
+            qd = np.asarray(self.q @ param_vec).ravel()
+            q, d = qd[:-1], np.squeeze(qd[-1:])
+        else:
+            q, d = canonInterface.get_matrix_from_tensor(
+                self.q, param_vec, self.x.size, with_offset=True)
+            q = q.toarray().flatten()
         A, b = self.reduced_A.get_matrix_from_tensor(param_vec, with_offset=True)
 
         # Apply parametric bounds tensors if present.

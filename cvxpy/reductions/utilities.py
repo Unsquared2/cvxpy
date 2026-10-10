@@ -109,6 +109,10 @@ class ReducedMat:
         # The rows in the map from parameters to problem data that
         # have any nonzeros.
         self.mapping_nonzero = None
+        # Whether the problem data depends on no parameter, and the
+        # matrices built for it then (see get_matrix_from_tensor).
+        self._param_free = None
+        self._const_result = {}
 
     def cache(self, keep_zeros: bool = False) -> None:
         """Cache computed attributes if not present.
@@ -154,8 +158,31 @@ class ReducedMat:
             and b is a flattened NumPy array representing the constant offset.
             If with_offset=False, returned b is None.
         """
-        return canonInterface.get_matrix_from_tensor(
-            self.reduced_mat, param_vec, self.var_len,
-            nonzero_rows=self.mapping_nonzero,
-            with_offset=with_offset,
-            problem_data_index=self.problem_data_index)
+        def build():
+            return canonInterface.get_matrix_from_tensor(
+                self.reduced_mat, param_vec, self.var_len,
+                nonzero_rows=self.mapping_nonzero,
+                with_offset=with_offset,
+                problem_data_index=self.problem_data_index)
+
+        # Data that depends on no parameter (often A and P of a DPP problem
+        # whose parameters enter only the objective or right-hand side) is
+        # the same for every parameter vector with the usual constant term
+        # 1: build it once, and hand out copies, since callers may modify
+        # what they receive.
+        if param_vec is None or param_vec[-1] != 1 or not self._is_param_free():
+            return build()
+        key = (with_offset, self.mapping_nonzero is not None)
+        if key not in self._const_result:
+            self._const_result[key] = build()
+        A, b = self._const_result[key]
+        return A.copy(), (None if b is None else b.copy())
+
+    def _is_param_free(self) -> bool:
+        """Whether no stored entry of the mapping involves a parameter
+        (the last column is the constant term)."""
+        if self._param_free is None:
+            mat = self.reduced_mat
+            self._param_free = (mat is not None and mat.shape[1] >= 1
+                                and sp.csc_array(mat)[:, :-1].nnz == 0)
+        return self._param_free

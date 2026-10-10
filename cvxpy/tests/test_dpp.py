@@ -1047,3 +1047,49 @@ class TestComposedParametricRefresh(BaseTest):
         self._sweep(
             prob, p, (1.0, 1000.0, 1.0),
             lambda val: self.assertAlmostEqual(x.value, -val / 2.0, places=3))
+
+
+class TestParameterFreeData(BaseTest):
+    """Problem data that depends on no parameter is built once per problem
+    and reused (as copies) when parameters change."""
+
+    def _problem(self, c_value, param_in_A=False):
+        x = cp.Variable(3)
+        c = cp.Parameter(3, value=c_value)
+        a = cp.Parameter(value=2.0)
+        cons = [x >= -1, (a if param_in_A else 2.0) * cp.sum(x) == 1]
+        return cp.Problem(cp.Minimize(cp.sum_squares(x) + c @ x), cons), c
+
+    def _reference(self, c_value):
+        x = cp.Variable(3)
+        cons = [x >= -1, 2.0 * cp.sum(x) == 1]
+        prob = cp.Problem(cp.Minimize(cp.sum_squares(x) + c_value @ x), cons)
+        data, _, _ = prob.get_problem_data(cp.CLARABEL)
+        return prob, data
+
+    def test_reused_data_matches_fresh_data(self) -> None:
+        prob, c = self._problem(np.array([1.0, 2.0, 3.0]))
+        data, _, _ = prob.get_problem_data(cp.CLARABEL)
+        # what a caller does to its data does not reach the next one
+        data[cp.settings.A].data[:] = 0.0
+        data[cp.settings.P].data[:] = 0.0
+        for c_value in [np.array([3.0, -2.0, 1.0]), np.array([0.5, 0.5, -4.0])]:
+            c.value = c_value
+            data, _, _ = prob.get_problem_data(cp.CLARABEL)
+            ref_prob, ref = self._reference(c_value)
+            for key in [cp.settings.A, cp.settings.P]:
+                self.assertEqual(abs(data[key] - ref[key]).max(), 0.0)
+            self.assertItemsAlmostEqual(data[cp.settings.C], ref[cp.settings.C])
+            self.assertItemsAlmostEqual(data[cp.settings.B], ref[cp.settings.B])
+            prob.solve(solver=cp.CLARABEL)
+            ref_prob.solve(solver=cp.CLARABEL)
+            self.assertAlmostEqual(prob.value, ref_prob.value)
+
+    def test_parameter_in_A_is_applied(self) -> None:
+        prob, c = self._problem(np.array([1.0, 2.0, 3.0]), param_in_A=True)
+        prob.solve(solver=cp.CLARABEL)
+        a = [p for p in prob.parameters() if p.shape == ()][0]
+        a.value = 4.0
+        prob.solve(solver=cp.CLARABEL)
+        x = prob.variables()[0]
+        self.assertAlmostEqual(4.0 * np.sum(x.value), 1.0, places=5)
