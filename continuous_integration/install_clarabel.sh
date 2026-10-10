@@ -7,7 +7,7 @@
 # needs a Rust toolchain.  Keep the version in step with [tool.uv] in
 # pyproject.toml.
 
-CLARABEL_VERSION="0.11.1+unsquared.1"
+CLARABEL_VERSION="0.11.1+unsquared.2"
 uv pip install \
   --find-links "https://github.com/Unsquared2/Clarabel.rs/releases/expanded_assets/v${CLARABEL_VERSION}" \
   "clarabel==${CLARABEL_VERSION}"
